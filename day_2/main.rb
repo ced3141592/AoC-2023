@@ -36,42 +36,46 @@ def parse_input_line(s)
   return game
 end
 
-# red=>12, green=>13, blue=>14
-def filter_valid_games(games, bag)
-  games.each do |id, round|
-    is_invalid_game = false
-    round.each do |grabs|
-      grabs.each do |color, amount|
-        bag.take_cubes(color, amount)
-        unless bag.is_valid
-          #   puts id, grabs
-          games.delete(id)
-          bag.reset
-          is_invalid_game = true
-          break
-        end
-        bag.reset
-      end
-      break if is_invalid_game
-    end
+def is_valid_game(game, bag)
+  bag.reset
+  game.all? do |round|
+    round.all? do |color, amount|
+      bag.take_cubes(color, amount) && bag.is_valid
+    end.tap { bag.reset }
   end
-  games
 end
 
-def add_ids(games)
-  i = 0
-  games.each do |id, _|
-    i += id
+def add_ids(games, bag)
+  games.sum { |id, game| is_valid_game(game, bag) ? id : 0 }
+end
+
+def calculate_power(cubes)
+  cubes.values.inject(:*)
+end
+
+def part_1(games, bag)
+  sum_ids = add_ids(games, bag)
+  puts sum_ids
+end
+
+def part_2(games)
+  sum_of_power = games.values.sum do |round|
+    min_cubes = round.inject(Hash.new) do |min_cubes, grab|
+      min_cubes = min_cubes.merge(grab) { |key, old_value, new_value| [old_value, new_value].max }
+    end
+    calculate_power(min_cubes)
   end
-  return i
+  puts sum_of_power
 end
 
 def main
   bag = Bag.new(12, 13, 14)
   games = load_input("input.txt")
-  valid_games = filter_valid_games(games, bag)
-  puts
-  puts add_ids(valid_games)
+
+  puts "\n--- part 1 ---"
+  part_1(games, bag)
+  puts "\n--- part 2 ---"
+  part_2(games)
 end
 
 main
